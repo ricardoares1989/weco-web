@@ -3,6 +3,10 @@ version: '3'
 volumes:
   local_postgres_data: {}
   local_postgres_data_backups: {}
+  local_pgadmin_data: {}
+
+networks:
+  local_dbpostgres:
 
 services:
   django: &django
@@ -21,6 +25,8 @@ services:
     ports:
       - "8000:8000"
     command: /start
+    networks:
+      - local_dbpostgres
 
   postgres:
     build:
@@ -33,6 +39,22 @@ services:
       - local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
+    networks:
+      - local_dbpostgres
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    env_file:
+      - ./.envs/.local/.pgadmin
+    depends_on:
+      - postgres
+    ports:
+      - "80:80"
+    volumes:
+      - local_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - local_dbpostgres
 
   docs:
     image: weco_local_docs
@@ -48,10 +70,13 @@ services:
       - ./weco:/app/weco
     ports:
       - "7000:7000"
+    
 
   redis:
     image: redis:5.0
     container_name: redis
+    networks:
+      - local_dbpostgres
 
   celeryworker:
     <<: *django
